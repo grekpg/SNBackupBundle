@@ -22,6 +22,7 @@ class Config
     const DATABASES  = "databases";
     const FILESYSTEM = "filesystem";
     const INCLUDE_FS = "include_fs";
+    const FINDER = "finder";
 
     protected static $config = [];
 
@@ -68,6 +69,11 @@ class Config
     public static function getGaufretteFs()
     {
         return self::get(self::INCLUDE_FS);
+    }
+
+    public static function getFinder()
+    {
+        return self::get(self::FINDER);
     }
 
     public static function getTimeout()

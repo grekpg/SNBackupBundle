@@ -25,6 +25,18 @@ class Configuration implements ConfigurationInterface
             ->integerNode('timeout')->defaultValue(1800)->end()
             ->arrayNode('databases')->prototype('scalar')->end()->end()
             ->arrayNode('include_fs')->prototype('scalar')->end()->end()
+            ->arrayNode('finder')->prototype('array')
+                    ->children()
+                    ->scalarNode('root_dir')->end()
+                    ->arrayNode('in')->prototype('scalar')->end()->end()
+                    ->arrayNode('name')->prototype('scalar')->end()->end()
+                    ->arrayNode('not_name')->prototype('scalar')->end()->end()
+                    ->arrayNode('path')->prototype('scalar')->end()->end()
+                    ->arrayNode('size')->prototype('scalar')->end()->end()
+                    ->arrayNode('date')->prototype('scalar')->end()->end()
+                    ->arrayNode('depth')->prototype('scalar')->end()->end()
+                    ->end()
+                ->end()->end()
             ->end();
 
         // Here you should define the parameters that are allowed to

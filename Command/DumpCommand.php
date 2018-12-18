@@ -32,6 +32,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 
 class DumpCommand extends ContainerAwareCommand
 {
@@ -157,6 +158,7 @@ class DumpCommand extends ContainerAwareCommand
             throw new \InvalidArgumentException($msg);
         }
 
+
         /**
          * @var $gaufrette FilesystemMap
          */
@@ -192,9 +194,17 @@ class DumpCommand extends ContainerAwareCommand
 
         $this->tempFolder = $this->createFolder($tmpFolder, true);
 
+        $loader      = new CommandLoader($this->output);
+
+        $finderList = Config::getFinder();
+        foreach ($finderList as $finderName => $finderConfig) {
+            $msg = sprintf("Export finder [%s]", $finderName);
+            $loader->setMessage($msg);
+            $this->logger->notice($msg);
+            $this->copyFinderFilesystem($finderName, $finderConfig);
+        }
 
         $connections = Config::get(Config::DATABASES);
-        $loader      = new CommandLoader($this->output);
         $loader->setMessage("Export databases")->run();
         foreach ($connections as $connection_name) {
             $msg = sprintf("Export database [%s]", $connection_name);
@@ -238,6 +248,144 @@ class DumpCommand extends ContainerAwareCommand
         $this->logger->notice('Backup complete.');
     }
 
+
+    /**
+     * @param $gaufretteFs \Gaufrette\Filesystem[]
+     */
+    protected function copyFinderFilesystem($finderName, $finderConfig)
+    {
+
+        $root_dir = $finderConfig['root_dir'];
+        unset($finderConfig['root_dir']);
+
+        $in = $finderConfig['in'];
+        unset($finderConfig['in']);
+
+        foreach ($in as $in){
+            $this->copyFinderFilesystemIn($root_dir, $in,$finderName, $finderConfig);
+        }
+
+    }
+
+    protected function copyFinderFilesystemIn($root_dir, $in,$finderName, $finderConfig){
+
+        $finder = new Finder();
+        $finder->in($root_dir.$in);
+
+        foreach($finderConfig as $name => $value){
+
+            switch ($name){
+
+                case 'name':
+                    $finder->name($value);
+                    break;
+
+                case 'not_name':
+                    $finder->notName($value);
+                    break;
+
+                case 'path':
+                    $finder->path($value);
+                    break;
+
+                case 'size':
+                    $finder->size($value);
+                    break;
+
+                case 'date':
+                    $finder->date($value);
+                    break;
+
+                case 'depth':
+                    $finder->depth($value);
+                    break;
+
+                default:
+                    throw new \Exception('Unknown config name: '.$name);
+                    break;
+
+            }
+
+        }
+
+        $fs       = $this->fs;
+        $progress = new ProgressBar($this->output, $finder->count());
+        $progress->setFormat(' %current%/%max% Filesystems --- %message%');
+        $progress->start();
+
+        $progress->advance();
+
+        $progress->setMessage(sprintf("Calculate [%s]",
+            $finderName));
+        $progress->display();
+
+
+        $subprogress = new ProgressBar($this->output, $finder->count());
+        if ($this->output->isVerbose()) {
+            $this->output->writeln('');
+            $subprogress->setFormat('normal');
+            $subprogress->start();
+            $subprogress->setRedrawFrequency($finder->count() / 100);
+        }
+
+        /**
+         * @var $file \SplFileInfo
+         */
+        foreach ($finder->getIterator() as $file) {
+
+            if ($file->isDir()) {
+
+//                    $this->output->writeln('mea: create dir '.sprintf("%s/%s",
+//                            $this->tempFolder,
+//                            $file->getPathname(),
+//                            ));
+//
+//                    $fs->mkdir(sprintf("%s/%s/%s/%s",
+//                        $this->tempFolder,
+//                        $finderName,
+//                        $file->getPathInfo()->getBasename(),
+//                        $file->getBasename()
+//                    ));
+
+            } else {
+
+                $name =  sprintf("%s/%s/%s/%s/%s",
+                    $this->tempFolder,
+                    $finderName,
+                    $in,
+                    $file->getRelativePath(),
+                    $file->getBasename()
+                );
+
+//                    $this->output->writeln('copy file '.$name);
+//
+//                    pa($file);
+
+                $data = $file->getContents();
+                $fs->dumpFile(
+                    $name,
+                    $data);
+            }
+
+            if ($this->output->isVerbose()) {
+                $subprogress->advance();
+            }
+
+
+        }
+
+        if ($this->output->isVerbose()) {
+            $subprogress->finish();
+            $this->output->write("\x0D");
+            $this->output->write("\x1B[2K");
+        }
+
+
+        $progress->finish();
+        $this->output->writeln(" - Complete!");
+
+    }
+
     /**
      * @param $gaufretteFs \Gaufrette\Filesystem[]
      */
@@ -249,6 +397,7 @@ class DumpCommand extends ContainerAwareCommand
         $progress->start();
 
         foreach ($gaufretteFs as $folder => $gfs) {
+
             $progress->advance();
 
             $progress->setMessage(sprintf("Calculate [%s]",
