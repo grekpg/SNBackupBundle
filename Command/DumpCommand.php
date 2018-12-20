@@ -267,6 +267,13 @@ class DumpCommand extends ContainerAwareCommand
 
     }
 
+    /**
+     * @param $root_dir
+     * @param $in
+     * @param $finderName
+     * @param $finderConfig
+     * @throws \Exception
+     */
     protected function copyFinderFilesystemIn($root_dir, $in,$finderName, $finderConfig){
 
         $finder = new Finder();
@@ -333,21 +340,7 @@ class DumpCommand extends ContainerAwareCommand
          */
         foreach ($finder->getIterator() as $file) {
 
-            if ($file->isDir()) {
-
-//                    $this->output->writeln('mea: create dir '.sprintf("%s/%s",
-//                            $this->tempFolder,
-//                            $file->getPathname(),
-//                            ));
-//
-//                    $fs->mkdir(sprintf("%s/%s/%s/%s",
-//                        $this->tempFolder,
-//                        $finderName,
-//                        $file->getPathInfo()->getBasename(),
-//                        $file->getBasename()
-//                    ));
-
-            } else {
+            if (!$file->isDir()) {
 
                 $name =  sprintf("%s/%s/%s/%s/%s",
                     $this->tempFolder,
@@ -356,10 +349,6 @@ class DumpCommand extends ContainerAwareCommand
                     $file->getRelativePath(),
                     $file->getBasename()
                 );
-
-//                    $this->output->writeln('copy file '.$name);
-//
-//                    pa($file);
 
                 $data = $file->getContents();
                 $fs->dumpFile(
