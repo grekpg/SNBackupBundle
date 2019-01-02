@@ -54,6 +54,10 @@ class BackupController extends Controller
      */
     public function downloadAction(Request $request)
     {
+        set_time_limit(0);
+        ignore_user_abort(true);
+        $this->get('session')->save();
+
         $list    = BackupList::factory();
         $backups = array_reverse(BackupList::factory()->getDumps()->toArray());
         /**
